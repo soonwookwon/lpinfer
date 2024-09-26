@@ -40,6 +40,7 @@
 #'   \eqn{||A - BB||_F < \epsilon}. If this does not hold, the FSST test will
 #'   use the \code{\link[expm]{sqrtm}} function from the \code{expm} package
 #'   to obtain the matrix square root.
+#'   @param seed Seed for monte carlo draws. If NULL, no seed is set. 
 #'
 #' @return Returns the following information:
 #'   \item{pval}{A table of \eqn{p}-values.}
@@ -108,7 +109,12 @@ fsst <- function(data = NULL, lpmodel, beta.tgt, R = 100, Rmulti = 1.25,
                  lambda = NA, rho = 1e-4, n = NULL, weight.matrix = "diag",
                  solver = NULL, progress = TRUE,
                  sqrtm.method = function(m) pracma::sqrtm(m)$B,
-                 sqrtm.tol = .Machine$double.eps^(1/2), previous.output = NA) {
+                 sqrtm.tol = .Machine$double.eps^(1/2), previous.output = NA,
+                 seed = 0) {
+  
+  if(!is.null(seed)){
+    set.seed(seed)
+  }
    # ---------------- #
    # Step 1: Update call, check and update the arguments; initialize df.error
    # ---------------- #
@@ -818,7 +824,7 @@ fsst.weight.matrix <- function(weight.matrix, beta.obs.hat, beta.sigma) {
     }
     weight.mat <- diag(diag(solve(beta.sigma)))     
   } else if (weight.matrix == "diag2") {
-    weight.mat <- 1/diag(diag(beta.sigma))
+    weight.mat <- diag( 1/base::pmax(diag(beta.sigma),10^(-6)) )
   } else if (weight.matrix == "avar") {
     if (min(eigen(beta.sigma)$values) < 1e-8) {
       
