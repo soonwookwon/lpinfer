@@ -810,8 +810,7 @@ fsst.beta.bs.fn <- function(x, data, lpmodel, pbar, progress, eval.count,
 #'
 #' @export
 #'
-fsst.weight.matrix <- function(weight.matrix, beta.obs.hat, beta.sigma,
-                               var.method) {
+fsst.weight.matrix <- function(weight.matrix, beta.obs.hat, beta.sigma) {
    # ---------------- #
    # Step 1: Convert the string to lower case.
    # ---------------- #
@@ -819,34 +818,26 @@ fsst.weight.matrix <- function(weight.matrix, beta.obs.hat, beta.sigma,
 
    # ---------------- #
    # Step 2: Create the matrix
-   # ---------------- #
-   weight.error.msg <- sprintf(paste0("The asymptotic variance computed using ",
-                                      "the %s is singular. Please use a ",
-                                      "different estimator or the ",
-                                      "identity matrix.\n"),
-                               var.method)
-   
-   if (weight.matrix == "identity") {
-      weight.mat <- diag(nrow(asmat(beta.obs.hat)))
-   } else if (weight.matrix == "diag") {
-     weight.mat <- tryCatch({
-       diag(diag(solve(beta.sigma)))
-     }, error = function(e) {
-       stop(weight.error.msg)
-       return(NA)
-     })
-     
-   } else if (weight.matrix == "avar") {
-     weight.mat <- tryCatch({
-       solve(beta.sigma)
-      }, error = function(e) {
-        stop(weight.error.msg)
-        return(NA)
-      })
-      
-   } else {
-      stop("'weight.matrix' has to be one of 'avar', 'diag' and 'identity'.")
-   }
+  # ---------------- #
+  if (weight.matrix == "identity") {
+    weight.mat <- diag(nrow(asmat(beta.obs.hat)))
+  } else if (weight.matrix == "diag") {
+    if (min(eigen(beta.sigma)$values) < 1e-8) {
+      warning("beta.sigma is singular. A small identity matrix has been added to beta.sigma to calculate your selected weight.matrix.")
+      beta.sigma <- beta.sigma + 1e-6 * diag(nrow(beta.sigma))
+    }
+    weight.mat <- diag(diag(solve(beta.sigma)))     
+  } else if (weight.matrix == "diag2") {
+    weight.mat <- 1/diag(diag(beta.sigma))
+  } else if (weight.matrix == "avar") {
+    if (min(eigen(beta.sigma)$values) < 1e-8) {
+      warning("beta.sigma is singular. A small identity matrix has been added to beta.sigma to calculate your selected weight.matrix.")
+      beta.sigma <- beta.sigma + 1e-6 * diag(nrow(beta.sigma))
+    }
+    weight.mat <- solve(beta.sigma)
+  } else {
+    stop("'weight.matrix' has to be one of 'avar', 'diag', 'diag2', and 'identity'.")
+  }
 
    return(weight.mat)
 }
